@@ -1,0 +1,8 @@
+[package]
+name = "cleanup_tree"
+version = "0.1.0"
+authors = ["pvh@sanbi.ac.za"]
+edition = "2018"
+
+[dependencies]
+clap = "2.32.0"
