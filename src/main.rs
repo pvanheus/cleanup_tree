@@ -46,16 +46,6 @@ fn main() {
 
                 }
             }
-//            for line_maybe in buffer.lines() {
-//                let line = line_maybe.unwrap();
-//                for c in line.chars() {
-//                    if !['A', 'C', 'T', 'G'].contains(&c) {
-//                        let out_buf = &mut [0];
-//                        c.encode_utf8(out_buf);
-//                        output_buffer.write(out_buf).expect("failed to write a character to output file");
-//                    }
-//                }
-//            }
             buffer.len()
         };
         if length == 0 {
