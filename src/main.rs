@@ -35,23 +35,35 @@ fn main() {
         bases.insert(*b);
     }
 
-    loop {
-        let length = {
-            let buffer = input_buffer.fill_buf().unwrap();
-            for chunk in buffer.chunks(500) {
-                for c in chunk.iter() {
-                    if !bases.contains( c ) {
-                        output_buffer.write(&[*c]).expect("failed to write a character to output file");
-                    }
-
-                }
-            }
-            buffer.len()
-        };
-        if length == 0 {
-            break;
-        } else {
-            input_buffer.consume(length);
+    let mut seen_bracket = false;  // if we see the first ( we start filtering
+    for c_maybe in input_buffer.bytes() {
+        let c = c_maybe.unwrap();
+        if !seen_bracket && c == b'(' {
+            seen_bracket = true;
         }
-    };
+
+        if !seen_bracket || !bases.contains( &c ) {  // copy the character to output if
+                                                           //  we haven't seen a bracket yet
+                                                           //  or otherwise if the character
+                                                           //  is not a DNA base
+            output_buffer.write(&[c]).expect("failed to write a character to output file");
+        }
+    }
+//    loop {
+//
+//        let length = {
+//            let buffer = input_buffer.fill_buf().unwrap();
+//            for chunk in buffer.chunks(500) {
+//                for c in chunk.iter() {
+//
+//                }
+//            }
+//            buffer.len()
+//        };
+//        if length == 0 {
+//            break;
+//        } else {
+//            input_buffer.consume(length);
+//        }
+//    };
 }
