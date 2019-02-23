@@ -1,10 +1,11 @@
 #[macro_use]
 extern crate clap;
+extern crate libc;
 
-use std::collections::HashSet;
 use std::io::{BufReader, BufWriter};
 use std::io::prelude::*;
 use std::fs::File;
+use std::os::unix::prelude::*;
 
 enum States {
     AwaitingBracket,
@@ -46,7 +47,7 @@ fn write_buffer(c: u8, pattern_buffer: &mut [u8], output_buffer: &mut BufWriter<
 /// a finite state machine to decide when to switch from writing to not writing
 fn main() {
     let matches = clap_app!(clean_tree =>
-        (version: "0.2.0")
+        (version: "0.3.0")
         (author: "Peter van Heusden <pvh@sanbi.ac.za>")
         (about: "Cleans up messy BEAST tree")
         (@arg INPUT: +required "Input filename")
@@ -59,19 +60,20 @@ fn main() {
     println!("arguments: {} {}", input_filename, output_filename);
 
     let infile = File::open(input_filename).expect("can't open input file");
+    let infile_len = infile.metadata().unwrap().len();
+    // advice from: https://eklitzke.org/efficient-file-copying-on-linux on fadvise and buffer size
+    unsafe {
+        assert_eq!(libc::posix_fadvise(infile.as_raw_fd(), 0,
+                                       infile_len as libc::off_t, libc::POSIX_FADV_SEQUENTIAL), 0);
+    }
     let outfile = File::create(output_filename).expect("failed to create output file");
 
-    let mut input_buffer = BufReader::new(infile);
+    let mut input_buffer = BufReader::with_capacity(128*1024, infile);
     let mut output_buffer = BufWriter::new(outfile);
     {
         let buf: &mut [u8] = &mut [0; 48412];
         input_buffer.read_exact(buf).expect("read_exact failed");
         output_buffer.write_all(buf).expect("write of initial read failed");
-    }
-
-    let mut bases: HashSet<u8> = HashSet::with_capacity(4);
-    for b in [b'A', b'C', b'T', b'G'].iter() {
-        bases.insert(*b);
     }
 
     let common_pattern = b"Eight_loc_Rec_regions_removed";
@@ -81,6 +83,7 @@ fn main() {
     let mut state: States = States::AwaitingBracket;
     let mut pattern_counter = 0;
     let mut pattern_buffer = [0; 34];
+    println!("start reading");
     for (byte_counter, c_maybe) in input_buffer.bytes().enumerate() {
         let c = c_maybe.unwrap(); // unwrap here because I don't expect read failures
 
